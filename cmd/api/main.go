@@ -1,4 +1,4 @@
-//Filename: cmd/api/main.go
+// Filename: cmd/api/main.go
 package main
 
 import (
@@ -8,20 +8,18 @@ import (
 	"net/http"
 	"os"
 	"time"
-	
 )
 
-//The application version number
+// The application version number
 const version = "1.0.0"
 
-
-//The configuration settings
+// The configuration settings
 type config struct {
 	port int
-	env string //development, stagging, production, etc.
+	env  string //development, stagging, production, etc.
 }
 
-//Dependency Injection
+// Dependency Injection
 type application struct {
 	config config
 	logger *log.Logger
@@ -34,7 +32,7 @@ func main() {
 	flag.StringVar(&cfg.env, "env", "development", "Environmnet (development | staging | production)")
 	flag.Parse()
 	//create a logger
-	logger := log.New(os.Stdout, "", log.Ldate | log.Ltime)
+	logger := log.New(os.Stdout, "", log.Ldate|log.Ltime)
 	//create an instance of our application struct
 	app := &application{
 		config: cfg,
@@ -44,11 +42,11 @@ func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/v1/healthcheck", app.healthcheckHandler)
 	//create our HTTP server
-	srv := &http.Server {
-		Addr: fmt.Sprintf(":%d", cfg.port),
-		Handler: mux,
-		IdleTimeout: time.Minute,
-		ReadTimeout: 10 * time.Second,
+	srv := &http.Server{
+		Addr:         fmt.Sprintf(":%d", cfg.port),
+		Handler:      app.routes(),
+		IdleTimeout:  time.Minute,
+		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 30 * time.Second,
 	}
 	//start our server
