@@ -5,6 +5,8 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
 	"net/http"
 	"strconv"
 
@@ -42,5 +44,43 @@ func (app *application) writeJSON(w http.ResponseWriter, status int, data envelo
 	w.WriteHeader(status)
 	//write the []byte slice containg the JSON response body
 	w.Write(js)
+	return nil
+}
+
+// dst stores decoded struct
+func (app *application) readJSON(W http.ResponseWriter, r *http.Request, dst interface{}) error {
+	//decode the request body into the target destination dst
+	err := json.NewDecoder(r.Body).Decode(dst)
+	//check for a bad request
+	if err != nil {
+		var syntaxError *json.SyntaxError
+		var unmarshalTypeError *json.UnmarshalTypeError
+		var invalidUnmarshalError *json.InvalidUnmarshalError
+
+		//switch to check for the errors
+		switch {
+		//check for syntax errors
+		case errors.As(err, &syntaxError):
+			return fmt.Errorf("body contains badly-formed JSON(at character %d)", syntaxError.Offset)
+		case errors.Is(err, io.ErrUnexpectedEOF):
+			return errors.New("body contains badly-formed JSON")
+		//Check for the wrong type pass by the user
+		case errors.As(err, &unmarshalTypeError):
+			if unmarshalTypeError.Field != "" {
+				return fmt.Errorf("body contains incorrect JSON type for field %q", unmarshalTypeError.Field)
+			}
+			return fmt.Errorf("body contains incorrect JSON type (at character %d)", unmarshalTypeError.Offset)
+		//Emtpy body
+		case errors.Is(err, io.EOF):
+			return errors.New("body must not be empty")
+		//Pass non-nil pointer error
+		case errors.As(err, &invalidUnmarshalError):
+			panic(err)
+			//default
+		default:
+			return err
+		}
+
+	}
 	return nil
 }
