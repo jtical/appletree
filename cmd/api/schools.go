@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"appletree.joelical.net/internal/data"
+	"appletree.joelical.net/internal/validator"
 )
 
 // createSchoolHandler for the "POST /v1/schools" endpoint
@@ -29,6 +30,26 @@ func (app *application) createSchoolHandler(w http.ResponseWriter, r *http.Reque
 		app.badRequestResponse(w, r, err)
 		return
 	}
+	//copy the values from the iput struct to a new School struct
+	school := &data.School{
+		Name:    input.Name,
+		Level:   input.Level,
+		Contact: input.Contact,
+		Phone:   input.Phone,
+		Email:   input.Email,
+		Website: input.Website,
+		Address: input.Address,
+		Mode:    input.Mode,
+	}
+	//Initialize a new validator instance
+	v := validator.New()
+
+	//check the map to determain if there were any validation errors
+	if data.ValidateSchool(v, school); !v.Valid() {
+		app.failedValidationResponse(w, r, v.Errors)
+		return
+	}
+
 	//Display the request
 	fmt.Fprintf(w, "%+v\n", input)
 }
